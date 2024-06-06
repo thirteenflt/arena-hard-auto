@@ -5,6 +5,7 @@ import os
 import yaml
 import argparse
 import time
+from azureml.core import Run
 
 def get_endpoints_key_map(endpoints, is_aml_run):
     endpoint_key_map = {}
