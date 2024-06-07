@@ -46,6 +46,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=str, default="8008", help="port for hosting vllm"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="Debug mode"
+    )
     args = parser.parse_args()
 
     endpoints = [{"name": "gpt-4-1106-preview-4eval"}]
@@ -130,7 +133,7 @@ if __name__ == "__main__":
     time.sleep(30)
 
     # run answer generation
-    os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml')
+    os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + ' --debug' if args.debug else '')
 
     # stop the model vllm hosting
     os.system('pkill -f vllm.entrypoints.openai.api_server')
