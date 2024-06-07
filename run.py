@@ -40,6 +40,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--is_aml_run", type=str, default="True", help="if it is an AML run"
     )
+    parser.add_argument(
+        "--output_dir", type=str, default="None", help="output dir for AML run"
+    )
+    parser.add_argument(
+        "--port", type=str, default="8008", help="port for hosting vllm"
+    )
     args = parser.parse_args()
 
     endpoints = [{"name": "gpt-4-1106-preview-4eval"}]
@@ -56,7 +62,7 @@ if __name__ == "__main__":
     else:
         api_key = os.environ['AOAI_API_KEY']
     
-    judge_model_name = 'gpt-4-1106-preview-4eval'
+    judge_model_name = 'tscience-uks-gpt4-1106'
     add_dict = {judge_model_name: 
                     {'model_name': judge_model_name, 
                     'endpoints': [{
@@ -76,7 +82,7 @@ if __name__ == "__main__":
 
     add_dict = {model_id: 
                     {'model_name': model_name, 
-                    'endpoints': [{'api_base': 'http://localhost:8000/v1', 'api_key': 'token-abc123'}], 
+                    'endpoints': [{'api_base': f'http://localhost:{args.port}/v1', 'api_key': 'token-abc123'}], 
                     'api_type': 'openai', 
                     'parallel': 16
                     }
@@ -118,7 +124,7 @@ if __name__ == "__main__":
 
 
     # start the model vllm hosting
-    os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 > server_output.log 2>&1 &')
+    os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 --port {args.port} > server_output.log 2>&1 &')
 
     # wait for the server to start
     time.sleep(30)
@@ -137,3 +143,7 @@ if __name__ == "__main__":
 
     # show results
     os.system(f'python show_result.py --judge-name {judge_model_name}')
+
+    # copy results to output dir
+    if args.output_dir != "None":
+        os.system(f'cp -r data/arena-hard-v0.1 {args.output_dir}')
