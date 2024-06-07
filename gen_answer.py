@@ -110,6 +110,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--endpoint-file", type=str, default="config/api_config.yaml"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="Debug mode"
+    )
     args = parser.parse_args()
 
     settings = make_config(args.setting_file)
@@ -123,7 +126,7 @@ if __name__ == "__main__":
         assert model in endpoint_list
         endpoint_info = endpoint_list[model]
 
-        question_file = os.path.join("data", settings["bench_name"], "question.jsonl")
+        question_file = os.path.join("data", settings["bench_name"], "question.jsonl" if not args.debug else "question_debug.jsonl")
         questions = load_questions(question_file)
 
         answer_file = os.path.join("data", settings["bench_name"], "model_answer", f"{model}.jsonl")
