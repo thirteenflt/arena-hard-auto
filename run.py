@@ -140,7 +140,8 @@ if __name__ == "__main__":
         time.sleep(30)
 
         # run answer generation
-        os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + ' --debug' if args.debug else '')
+        debug_suffix = '--debug' if args.debug else ''
+        os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + debug_suffix)
 
         # stop the model vllm hosting
         os.system('pkill -f vllm.entrypoints.openai.api_server')
@@ -156,7 +157,7 @@ if __name__ == "__main__":
         if args.input_dir != "None":
             os.system(f'cp -r {args.input_dir}/arena-hard-v0.1 data/')
         
-        # run judgement generation
+        # run judgment generation
         os.system('python gen_judgment.py --setting-file config/judge_config_test.yaml --endpoint-file config/api_config_test.yaml')
 
         # show results
