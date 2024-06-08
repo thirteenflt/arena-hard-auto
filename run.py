@@ -41,6 +41,9 @@ if __name__ == "__main__":
         "--is_aml_run", type=str, default="True", help="if it is an AML run"
     )
     parser.add_argument(
+        "--input_dir", type=str, default="None", help="input dir for AML run"
+    )
+    parser.add_argument(
         "--output_dir", type=str, default="None", help="output dir for AML run"
     )
     parser.add_argument(
@@ -48,6 +51,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--debug", action="store_true", help="Debug mode"
+    )
+    parser.add_argument(
+        "--mode", type=str, default="all", help="mode to run, all or gen_answer or gen_judgment",
+        choices=["all", "gen_answer", "gen_judgment"]
     )
     args = parser.parse_args()
 
@@ -125,28 +132,36 @@ if __name__ == "__main__":
     with open(file_path, 'w') as file:
         yaml.safe_dump(judge_config, file, default_flow_style=False)
 
+    if args.mode in ["gen_answer", "all"]:
+        # start the model vllm hosting
+        os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 --port {args.port} > server_output.log 2>&1 &')
 
-    # start the model vllm hosting
-    os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 --port {args.port} > server_output.log 2>&1 &')
+        # wait for the server to start
+        time.sleep(30)
 
-    # wait for the server to start
-    time.sleep(30)
+        # run answer generation
+        os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + ' --debug' if args.debug else '')
 
-    # run answer generation
-    os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + ' --debug' if args.debug else '')
+        # stop the model vllm hosting
+        os.system('pkill -f vllm.entrypoints.openai.api_server')
 
-    # stop the model vllm hosting
-    os.system('pkill -f vllm.entrypoints.openai.api_server')
+        # wait for the server to stop
+        time.sleep(10)
 
-    # wait for the server to stop
-    time.sleep(10)
+        # copy results to output dir
+        if args.output_dir != "None":
+            os.system(f'cp -r data/arena-hard-v0.1 {args.output_dir}')
 
-    # run judgement generation
-    os.system('python gen_judgment.py --setting-file config/judge_config_test.yaml --endpoint-file config/api_config_test.yaml')
+    if args.mode in ["gen_judgment", "all"]:
+        if args.input_dir != "None":
+            os.system(f'cp -r {args.input_dir}/arena-hard-v0.1 data/')
+        
+        # run judgement generation
+        os.system('python gen_judgment.py --setting-file config/judge_config_test.yaml --endpoint-file config/api_config_test.yaml')
 
-    # show results
-    os.system(f'python show_result.py --judge-name {judge_model_name}')
+        # show results
+        os.system(f'python show_result.py --judge-name {judge_model_name}')
 
-    # copy results to output dir
-    if args.output_dir != "None":
-        os.system(f'cp -r data/arena-hard-v0.1 {args.output_dir}')
+        # copy results to output dir
+        if args.output_dir != "None":
+            os.system(f'cp -r data/arena-hard-v0.1 {args.output_dir}')
