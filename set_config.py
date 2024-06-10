@@ -38,6 +38,10 @@ if __name__ == "__main__":
         "--model_name", type=str, help="model name corresponds to vllm server"
     )
     parser.add_argument(
+        "--judge_model_name", type=str, help="name of the judge model",
+        default="tscience-uks-gpt4-1106", choices=["tscience-uks-gpt4-1106", "tscience-uks-gpt-4o"]
+    )
+    parser.add_argument(
         "--is_aml_run", type=str, default="True", help="if it is an AML run"
     )
     parser.add_argument(
@@ -65,7 +69,7 @@ if __name__ == "__main__":
     else:
         api_key = os.environ['AOAI_API_KEY']
     
-    judge_model_name = 'tscience-uks-gpt4-1106'
+    judge_model_name = args.judge_model_name
     add_dict = {judge_model_name: 
                     {'model_name': judge_model_name, 
                     'endpoints': [{
