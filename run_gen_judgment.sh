@@ -12,8 +12,11 @@ fi
 # Run judgment generation
 python gen_judgment.py --setting-file config/judge_config_test.yaml --endpoint-file config/api_config_test.yaml
 
+# load config/judge_config_test.yaml and extract judge_name
+judge_name=$(python -c "import yaml; print(yaml.safe_load(open('config/judge_config_test.yaml'))['judge_model'])")
+
 # Show results
-python show_result.py --judge-name tscience-uks-gpt4-1106
+python show_result.py --judge-name "$judge_name"
 
 # Copy results to output dir if not 'None'
 if [ "$output_dir" != "None" ]; then
