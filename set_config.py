@@ -87,7 +87,7 @@ if __name__ == "__main__":
                     {'model_name': model_name, 
                     'endpoints': [{'api_base': f'http://localhost:{args.port}/v1', 'api_key': 'token-abc123'}], 
                     'api_type': 'openai', 
-                    'parallel': 16
+                    'parallel': 8,
                     }
                 }
 

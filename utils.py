@@ -160,6 +160,9 @@ def chat_completion_openai_azure(model, messages, temperature, max_tokens, api_d
         except openai.BadRequestError as e:
             print(type(e), e)
             break
+        except openai.APITimeoutError as e:
+            print(type(e), e)
+            break
         except KeyError:
             print(type(e), e)
             break
