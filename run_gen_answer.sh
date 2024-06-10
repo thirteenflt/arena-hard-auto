@@ -7,7 +7,7 @@ question_file="${3:-question.jsonl}" # Default question_file value is 'question.
 output_dir="${4:-None}"  # Default output_dir value is 'None'
 
 # Start the model vllm hosting
-nohup python -m vllm.entrypoints.openai.api_server --model "$model_name" --dtype auto --api-key token-abc123 --port "$port" --max-model-len 8000 > data/arena-hard-v0.1/server_output.log 2>&1 &
+nohup python -m vllm.entrypoints.openai.api_server --model "$model_name" --dtype auto --api-key token-abc123 --port "$port" > data/arena-hard-v0.1/server_output.log 2>&1 &
 
 # Wait for the server to start
 sleep 30
