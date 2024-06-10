@@ -123,10 +123,10 @@ def chat_completion_openai(model, messages, temperature, max_tokens, api_dict=No
             print(type(e), e)
         except openai.APITimeoutError as e:
             print(type(e), e)
-            break
+            time.sleep(API_RETRY_SLEEP)
         except openai.APIConnectionError as e:
             print(type(e), e)
-            break
+            time.sleep(API_RETRY_SLEEP)
         except KeyError:
             print(type(e), e)
             break
@@ -168,7 +168,10 @@ def chat_completion_openai_azure(model, messages, temperature, max_tokens, api_d
             break
         except openai.APITimeoutError as e:
             print(type(e), e)
-            break
+            time.sleep(API_RETRY_SLEEP)
+        except openai.APIConnectionError as e:
+            print(type(e), e)
+            time.sleep(API_RETRY_SLEEP)
         except KeyError:
             print(type(e), e)
             break
