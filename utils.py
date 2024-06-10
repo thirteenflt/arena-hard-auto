@@ -121,6 +121,12 @@ def chat_completion_openai(model, messages, temperature, max_tokens, api_dict=No
         except openai.BadRequestError as e:
             print(messages)
             print(type(e), e)
+        except openai.APITimeoutError as e:
+            print(type(e), e)
+            break
+        except openai.APIConnectionError as e:
+            print(type(e), e)
+            break
         except KeyError:
             print(type(e), e)
             break
