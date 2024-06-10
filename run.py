@@ -90,13 +90,28 @@ if __name__ == "__main__":
     model_id = args.model_id
     model_name = args.model_name
 
-    add_dict = {model_id: 
-                    {'model_name': model_name, 
-                    'endpoints': [{'api_base': f'http://localhost:{args.port}/v1', 'api_key': 'token-abc123'}], 
-                    'api_type': 'openai', 
+    if model_id == "tscience-uks-gpt4-1106":
+        add_dict = {model_id: 
+                    {'model_name': model_id, 
+                    'endpoints': [{
+                                    'api_base': 'https://aims-oai-research-inference-uks.openai.azure.com/', 
+                                    'api_key': api_key, 
+                                    'api_version': '2024-02-01'
+                                }],
+                    'api_type': 'azure', 
                     'parallel': 8,
                     }
                 }
+        use_vllm = False
+    else:
+        add_dict = {model_id: 
+                        {'model_name': model_name, 
+                        'endpoints': [{'api_base': f'http://localhost:{args.port}/v1', 'api_key': 'token-abc123'}], 
+                        'api_type': 'openai', 
+                        'parallel': 8,
+                        }
+                    }
+        use_vllm = True
 
     api_config.update(add_dict)
     print(api_config)
@@ -133,21 +148,21 @@ if __name__ == "__main__":
         yaml.safe_dump(judge_config, file, default_flow_style=False)
 
     if args.mode in ["gen_answer", "all"]:
-        # start the model vllm hosting
-        os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 --port {args.port} > server_output.log 2>&1 &')
-
-        # wait for the server to start
-        time.sleep(30)
+        if use_vllm:
+            # start the model vllm hosting
+            os.system(f'nohup python -m vllm.entrypoints.openai.api_server --model {model_name} --dtype auto --api-key token-abc123 --port {args.port} > server_output.log 2>&1 &')
+            # wait for the server to start
+            time.sleep(30)
 
         # run answer generation
-        debug_suffix = '--debug' if args.debug else ''
+        debug_suffix = ' --debug' if args.debug else ''
         os.system('python gen_answer.py --setting-file config/gen_answer_config_test.yaml --endpoint-file config/api_config_test.yaml' + debug_suffix)
 
-        # stop the model vllm hosting
-        os.system('pkill -f vllm.entrypoints.openai.api_server')
-
-        # wait for the server to stop
-        time.sleep(10)
+        if use_vllm:
+            # stop the model vllm hosting
+            os.system('pkill -f vllm.entrypoints.openai.api_server')
+            # wait for the server to stop
+            time.sleep(10)
 
         # copy results to output dir
         if args.output_dir != "None":
