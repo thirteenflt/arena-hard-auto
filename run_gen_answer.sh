@@ -12,7 +12,7 @@ vllm_max_length=$((model_max_length > 8192 || model_max_length == null ? 8192 : 
 echo "Model max length: $model_max_length, VLLM max length: $vllm_max_length"
 
 # Start the model vllm hosting
-nohup python -m vllm.entrypoints.openai.api_server --model "$model_name" --max-model-len $vllm_max_length --dtype auto --api-key token-abc123 --port "$port" > data/arena-hard-v0.1/server_output.log 2>&1 &
+nohup python -m vllm.entrypoints.openai.api_server --model "$model_name" --max-model-len $vllm_max_length --dtype auto --api-key token-abc123 --port "$port" --trust-remote-code > data/arena-hard-v0.1/server_output.log 2>&1 &
 
 # Wait for the server to start
 sleep 30
