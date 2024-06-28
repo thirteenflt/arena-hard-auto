@@ -6,6 +6,7 @@ import yaml
 import argparse
 import time
 from azureml.core import Run
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 def get_endpoints_key_map(endpoints, is_aml_run):
     endpoint_key_map = {}
@@ -55,26 +56,31 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    endpoints = [{"name": "gpt-4-1106-preview-4eval"}]
-    endpoint_key_map = get_endpoints_key_map(endpoints, args.is_aml_run)
+    ## deprecated
+    # endpoints = [{"name": "gpt-4-1106-preview-4eval"}]
+    # endpoint_key_map = get_endpoints_key_map(endpoints, args.is_aml_run)
+
+    # # add judge model api
+    # if args.is_aml_run == "True":
+    #     api_key = endpoint_key_map["gpt-4-1106-preview-4eval"]
+    # else:
+    #     api_key = os.environ['AOAI_API_KEY']
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(managed_identity_client_id=os.environ.get("DEFAULT_IDENTITY_CLIENT_ID")),
+        "https://cognitiveservices.azure.com/.default")
 
     # read the api_config file
     file_path = os.path.join(os.path.dirname(__file__), 'config/api_config.yaml')
     with open(file_path, 'r') as file:
         api_config = yaml.safe_load(file)
-
-    # add judge model api
-    if args.is_aml_run == "True":
-        api_key = endpoint_key_map["gpt-4-1106-preview-4eval"]
-    else:
-        api_key = os.environ['AOAI_API_KEY']
     
     judge_model_name = args.judge_model_name
     add_dict = {judge_model_name: 
                     {'model_name': judge_model_name, 
                     'endpoints': [{
                                     'api_base': 'https://aims-oai-research-inference-uks.openai.azure.com/', 
-                                    'api_key': api_key, 
+                                    'token_provider': token_provider, 
                                     'api_version': '2024-02-01'
                                 }],
                     'api_type': 'azure', 

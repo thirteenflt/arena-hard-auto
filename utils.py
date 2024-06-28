@@ -141,7 +141,8 @@ def chat_completion_openai_azure(model, messages, temperature, max_tokens, api_d
     api_base = api_dict["api_base"]
     client = AzureOpenAI(
         azure_endpoint = api_base,
-        api_key= api_dict["api_key"],
+        # api_key= api_dict["api_key"],
+        azure_ad_token_provider = api_dict["token_provider"],
         api_version=api_dict["api_version"],
         timeout=240,
         max_retries=2
