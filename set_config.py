@@ -66,10 +66,6 @@ if __name__ == "__main__":
     # else:
     #     api_key = os.environ['AOAI_API_KEY']
 
-    token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(managed_identity_client_id=os.environ.get("DEFAULT_IDENTITY_CLIENT_ID")),
-        "https://cognitiveservices.azure.com/.default")
-
     # read the api_config file
     file_path = os.path.join(os.path.dirname(__file__), 'config/api_config.yaml')
     with open(file_path, 'r') as file:
@@ -80,7 +76,6 @@ if __name__ == "__main__":
                     {'model_name': judge_model_name, 
                     'endpoints': [{
                                     'api_base': 'https://aims-oai-research-inference-uks.openai.azure.com/', 
-                                    'token_provider': token_provider, 
                                     'api_version': '2024-02-01'
                                 }],
                     'api_type': 'azure', 
