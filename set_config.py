@@ -6,7 +6,6 @@ import yaml
 import argparse
 import time
 from azureml.core import Run
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 def get_endpoints_key_map(endpoints, is_aml_run):
     endpoint_key_map = {}
@@ -55,16 +54,6 @@ if __name__ == "__main__":
         "--port", type=str, default="8008", help="port for hosting vllm"
     )
     args = parser.parse_args()
-
-    ## deprecated
-    # endpoints = [{"name": "gpt-4-1106-preview-4eval"}]
-    # endpoint_key_map = get_endpoints_key_map(endpoints, args.is_aml_run)
-
-    # # add judge model api
-    # if args.is_aml_run == "True":
-    #     api_key = endpoint_key_map["gpt-4-1106-preview-4eval"]
-    # else:
-    #     api_key = os.environ['AOAI_API_KEY']
 
     # read the api_config file
     file_path = os.path.join(os.path.dirname(__file__), 'config/api_config.yaml')
