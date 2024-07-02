@@ -7,6 +7,7 @@ import requests
 
 from typing import Optional
 from glob import glob
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 # API setting constants
 API_MAX_RETRY = 16
@@ -40,6 +41,10 @@ temperature_config = {
     "stem": 0.1,
     "humanities": 0.1,
 }
+
+azure_token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(managed_identity_client_id=os.environ.get("DEFAULT_IDENTITY_CLIENT_ID")),
+        "https://cognitiveservices.azure.com/.default")
 
 
 def load_questions(question_file: str):
@@ -141,7 +146,7 @@ def chat_completion_openai_azure(model, messages, temperature, max_tokens, api_d
     api_base = api_dict["api_base"]
     client = AzureOpenAI(
         azure_endpoint = api_base,
-        api_key= api_dict["api_key"],
+        azure_ad_token_provider = azure_token_provider,
         api_version=api_dict["api_version"],
         timeout=240,
         max_retries=2
