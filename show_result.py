@@ -7,6 +7,7 @@ import datetime
 import argparse
 import os
 import math
+import re
 
 from glob import glob
 from tqdm import tqdm
@@ -43,15 +44,16 @@ def compute_mle_elo(df, SCALE=400, BASE=10, INIT_RATING=1000):
 
     elo_scores = SCALE * lr.coef_[0] + INIT_RATING
 
-    # set anchor as gpt-4-0314 = 1000
-    if "gpt-4-0314" in models.index:
-        elo_scores += 1000 - elo_scores[models["gpt-4-0314"]]
+    # set anchor as gpt-4-turbo-1106 = 1000
+    if "gpt-4-turbo-1106" in models.index:
+        elo_scores += 1000 - elo_scores[models["gpt-4-turbo-1106"]]
     return pd.Series(elo_scores, index = models.index).sort_values(ascending=False)
 
 
 def get_bootstrap_result(battles, func_compute_elo, num_round):
     rows = []
-    for i in tqdm(range(num_round), desc="bootstrap"):
+    # for i in tqdm(range(num_round), desc="bootstrap"):
+    for i in range(num_round):
         rows.append(func_compute_elo(battles.sample(frac=1.0, replace=True)))
     df = pd.DataFrame(rows)
     return df[df.median().sort_values(ascending=False).index]
@@ -103,7 +105,7 @@ def predict_win_rate(elo_ratings, SCALE=400, BASE=10, INIT_RATING=1000):
     return df.T
 
 
-def get_win_rate_column(df, column, baseline="gpt-4-0314"):
+def get_win_rate_column(df, column, baseline="gpt-4-turbo-1106"):
     to_dict = df[["model", column]].set_index("model").to_dict()[column]
     win_rate_table = predict_win_rate(to_dict)
     return win_rate_table[baseline].fillna(0.5).apply(lambda x: round(x * 100, 2))
@@ -122,8 +124,9 @@ def get_battles_from_judgment(judge_name, first_game_only=False, WEIGHT=3):
         for _, row in df.iterrows():
             # game 1
             output = {"question_id": row["question_id"],
-                    "model_a": "gpt-4-0314",
+                    "model_a": "gpt-4-turbo-1106",
                     "model_b": row["model"]}
+            output["category"] = re.findall(r'category\[(.*?)\]', row["question_id"])[0]
 
             game = row["games"][0]
 
@@ -149,8 +152,9 @@ def get_battles_from_judgment(judge_name, first_game_only=False, WEIGHT=3):
             if not first_game_only:
                 # game 2
                 output = {"question_id": row["question_id"],
-                        "model_a": "gpt-4-0314",
+                        "model_a": "gpt-4-turbo-1106",
                         "model_b": row["model"]}
+                output["category"] = re.findall(r'category\[(.*?)\]', row["question_id"])[0]
 
                 game = row["games"][1]
 
@@ -180,7 +184,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bench-name", type=str, default="arena-hard-v0.1")
     parser.add_argument("--judge-name", type=str, default="gpt-4-1106-preview")
-    parser.add_argument("--baseline", type=str, default="gpt-4-0314")
+    parser.add_argument("--baseline", type=str, default="gpt-4-turbo-1106")
     parser.add_argument("--load-battles", action="store_true")
     parser.add_argument("--load-bootstrap", action="store_true")
     parser.add_argument("--show-elo", action="store_true")
@@ -200,55 +204,69 @@ if __name__ == "__main__":
         battles = pd.read_json("data/arena_hard_battles.jsonl", lines=True)
     else:
         battles = get_battles_from_judgment(args.judge_name, args.first_game_only, args.weight)
+    
+    # divide battles into a list of battles by category
+    battles_by_category = {}
+    for category in battles["category"].unique():
+        battles_by_category[category] = battles[battles["category"] == category]
+    
+    battles_list = [["total", battles]] + [[category, battles] for category, battles in battles_by_category.items()]
+
+    for category, battles in battles_list:
         
-    bootstrap_online_elo = compute_mle_elo(battles)
+        bootstrap_online_elo = compute_mle_elo(battles)
 
+        if args.load_bootstrap:
+            bootstrap_elo_lu = pd.read_json("data/bootstrapping_results.jsonl", lines=True)
+        else:
+            np.random.seed(42)
+            bootstrap_elo_lu = get_bootstrap_result(battles, compute_mle_elo, args.num_rounds)
+            bootstrap_elo_lu.to_json("data/bootstrapping_results.jsonl", lines=True, orient="records")
 
-    if args.load_bootstrap:
-        bootstrap_elo_lu = pd.read_json("data/bootstrapping_results.jsonl", lines=True)
-    else:
-        np.random.seed(42)
-        bootstrap_elo_lu = get_bootstrap_result(battles, compute_mle_elo, args.num_rounds)
-        bootstrap_elo_lu.to_json("data/bootstrapping_results.jsonl", lines=True, orient="records")
+        stats = pd.DataFrame()
+        stats["results"] = None
+        stats["results"] = stats['results'].astype('object')
 
-    stats = pd.DataFrame()
-    stats["results"] = None
-    stats["results"] = stats['results'].astype('object')
+        for i, model in enumerate(bootstrap_online_elo.index):
+            assert model in bootstrap_elo_lu.columns
 
-    for i, model in enumerate(bootstrap_online_elo.index):
-        assert model in bootstrap_elo_lu.columns
+            stats.at[i, "model"] = model
+            stats.at[i, "score"] = bootstrap_online_elo[model]
+            stats.at[i, "lower"] = np.percentile(bootstrap_elo_lu[model], 2.5)
+            stats.at[i, "upper"] = np.percentile(bootstrap_elo_lu[model], 97.5)
 
-        stats.at[i, "model"] = model
-        stats.at[i, "score"] = bootstrap_online_elo[model]
-        stats.at[i, "lower"] = np.percentile(bootstrap_elo_lu[model], 2.5)
-        stats.at[i, "upper"] = np.percentile(bootstrap_elo_lu[model], 97.5)
+            length = []
+            if model in model_answers:
+                for _, row in model_answers[model].items():
+                    if category in row["question_id"] or category == "total":
+                        turn = row["choices"][0]["turns"][0]
+                        length.append(turn["token_len"])
+            if length:
+                length = np.mean(length)
+            else:
+                length = 0
 
-        length = 0
-        if model in model_answers:
-            for _, row in model_answers[model].items():
-                turn = row["choices"][0]["turns"][0]
-                length += turn["token_len"]
-            length /= len(model_answers[model])
+            stats.at[i, "avg_tokens"] = int(length)
+            stats.at[i, "results"] = bootstrap_elo_lu[model].tolist()
+        
+        if not args.show_elo:
+            stats.sort_values(by="model", inplace=True)
+            stats["score"] = get_win_rate_column(stats, "score", args.baseline).tolist()
+            stats["lower"] = get_win_rate_column(stats, "lower", args.baseline).tolist()
+            stats["upper"] = get_win_rate_column(stats, "upper", args.baseline).tolist()
+            decimal = 1
+        else:
+            decimal = 0
+            stats = stats.astype({"score" : int, "lower" : int, "upper" : int})
+        
+        stats.sort_values(by="score", ascending=False, inplace=True)
+        print("=====================================")
+        print("category:", category)
+        for _, row in stats.iterrows():
+            interval = str((round(row['lower'] - row['score'], decimal), round(row['upper'] - row['score'], decimal)))
+            print(f"{row['model'] : <30} | score: {round(row['score'], decimal) : ^5} | 95% CI: {interval : ^12} | average #tokens: {int(row['avg_tokens'])}")
 
-        stats.at[i, "avg_tokens"] = int(length)
-        stats.at[i, "results"] = bootstrap_elo_lu[model].tolist()
-    
-    if not args.show_elo:
-        stats.sort_values(by="model", inplace=True)
-        stats["score"] = get_win_rate_column(stats, "score", args.baseline).tolist()
-        stats["lower"] = get_win_rate_column(stats, "lower", args.baseline).tolist()
-        stats["upper"] = get_win_rate_column(stats, "upper", args.baseline).tolist()
-        decimal = 1
-    else:
-        decimal = 0
-        stats = stats.astype({"score" : int, "lower" : int, "upper" : int})
-    
-    stats.sort_values(by="score", ascending=False, inplace=True)
-    for _, row in stats.iterrows():
-        interval = str((round(row['lower'] - row['score'], decimal), round(row['upper'] - row['score'], decimal)))
-        print(f"{row['model'] : <30} | score: {round(row['score'], decimal) : ^5} | 95% CI: {interval : ^12} | average #tokens: {int(row['avg_tokens'])}")
-
-    if args.output:
-        cur_date = datetime.datetime.now()
-        date_str = cur_date.strftime("%Y%m%d")
-        stats.to_json(f"arena_hard_leaderboard_{date_str}.json", orient="records", indent=4)
+        if args.output:
+            cur_date = datetime.datetime.now()
+            date_str = cur_date.strftime("%Y%m%d")
+            stats.to_json(f"arena_hard_leaderboard_{date_str}.json", orient="records", indent=4)

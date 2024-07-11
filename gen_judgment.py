@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--setting-file", type=str, default="config/judge_config.yaml")
     parser.add_argument("--endpoint-file", type=str, default="config/api_config.yaml")
+    parser.add_argument("--question-file", type=str, default="question.jsonl")
     args = parser.parse_args()
     print(args)
 
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     if configs["regex_pattern"]:
         pattern = re.compile(configs["regex_pattern"])
 
-    question_file = os.path.join("data", configs["bench_name"], "question.jsonl")
+    question_file = os.path.join("data", configs["bench_name"], args.question_file)
     answer_dir = os.path.join("data", configs["bench_name"], "model_answer")
     ref_answer_dir = os.path.join("data", configs["bench_name"], "reference_answer")
 
