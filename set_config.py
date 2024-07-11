@@ -68,7 +68,7 @@ if __name__ == "__main__":
                                     'api_version': '2024-02-01'
                                 }],
                     'api_type': 'azure', 
-                    'parallel': 8,
+                    'parallel': 16,
                     }
                 }
     api_config.update(add_dict)
