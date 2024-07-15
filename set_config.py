@@ -64,18 +64,23 @@ if __name__ == "__main__":
     with open(file_path, 'r') as file:
         api_config = yaml.safe_load(file)
     
-    judge_model_name = args.judge_model_name
-    add_dict = {judge_model_name: 
-                    {'model_name': judge_model_name, 
-                    'endpoints': [{
-                                    'api_base': 'https://aims-oai-research-inference-uks.openai.azure.com/', 
-                                    'api_version': '2024-02-01'
-                                }],
-                    'api_type': 'azure', 
-                    'parallel': 16,
+    model_name_list = ["tscience-uks-gpt-35-turbo-1106", "tscience-uks-gpt4-1106", "tscience-uks-gpt-4o"]
+    for model_name_api in model_name_list:
+        if model_name_api == "tscience-uks-gpt4-1106":
+            parallel = 8
+        else:
+            parallel = 16
+        add_dict = {model_name_api: 
+                        {'model_name': model_name_api, 
+                        'endpoints': [{
+                                        'api_base': 'https://aims-oai-research-inference-uks.openai.azure.com/', 
+                                        'api_version': '2024-02-01'
+                                    }],
+                        'api_type': 'azure', 
+                        'parallel': parallel,
+                        }
                     }
-                }
-    api_config.update(add_dict)
+        api_config.update(add_dict)
 
     # add test model api
     model_id = args.model_id
@@ -115,7 +120,7 @@ if __name__ == "__main__":
     with open(file_path, 'r') as file:
         judge_config = yaml.safe_load(file)
 
-    judge_config['judge_model'] = judge_model_name
+    judge_config['judge_model'] = args.judge_model_name
     judge_config['baseline_model'] = args.baseline_model_name
     judge_config['model_list'] = [model_id]
     judge_config['system_prompt'] = "Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants to the user prompt displayed below. You will be given assistant A's answer and assistant B's answer. Your job is to evaluate which assistant's answer is better.\n\nBegin your evaluation by generating your own answer to the prompt. You must provide your answers before judging any answers.\n\nWhen evaluating the assistants' answers, compare both assistants' answers with your answer. You must identify and correct any mistakes or inaccurate information.\n\nThen consider if the assistant's answers are in the same language as the user prompt. This is very important for user experience.\n\nThen consider if the assistant's answers are helpful, relevant, and concise. Helpful means the answer correctly responds to the prompt or follows the instructions. Note when user prompt has any ambiguity or more than one interpretation, it is more helpful and appropriate to ask for clarifications or more information from the user than providing an answer based on assumptions. Relevant means all parts of the response closely connect or are appropriate to what is being asked. Concise means the response is clear and not verbose or excessive.\n\nThen consider the creativity and novelty of the assistant's answers when needed. Finally, identify any missing important information in the assistants' answers that would be beneficial to include when responding to the user prompt.\n\nAfter providing your explanation, you must output only one of the following choices as your final verdict with a label:\n\n1. Assistant A is significantly better: [[A>>B]]\n2. Assistant A is slightly better: [[A>B]]\n3. Tie, relatively the same: [[A=B]]\n4. Assistant B is slightly better: [[B>A]]\n5. Assistant B is significantly better: [[B>>A]]\n\nExample output: \"My final verdict is tie: [[A=B]]\"."
