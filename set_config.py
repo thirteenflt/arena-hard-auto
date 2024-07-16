@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--baseline_model_name", type=str, help="name of the baseline model",
-        default="tscience-uks-gpt-35-turbo-1106", choices=["tscience-uks-gpt-35-turbo-1106", "tscience-uks-gpt-35-turbo-4o"]
+        default="tscience-uks-gpt-35-turbo-1106", choices=["tscience-uks-gpt-35-turbo-1106", "tscience-uks-gpt-4o"]
     )
     parser.add_argument(
         "--is_aml_run", type=str, default="True", help="if it is an AML run"
