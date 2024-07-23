@@ -210,7 +210,13 @@ if __name__ == "__main__":
     for category in battles["category"].unique():
         battles_by_category[category] = battles[battles["category"] == category]
     
-    battles_list = [["total", battles]] + [[category, battles] for category, battles in battles_by_category.items()]
+    language_tier = {"Tier-1": ["Chinese", "Japanese", "French", "Spanish", "German", "Italian", "Portuguese"], "Tier-2": ["Arabic", "Hindi", "Korean", "Czech", "Danish", "Finnish", "Hebrew", "Hungarian", "Dutch", "Norwegian", "Polish", "Russian", "Swedish", "Thai", "Turkish", "Ukrainian"]}
+
+    battles_by_category["Tier-1"] = pd.concat([battles_by_category[lang] for lang in battles_by_category if lang in language_tier["Tier-1"]])
+    battles_by_category["Tier-2"] = pd.concat([battles_by_category[lang] for lang in battles_by_category if lang in language_tier["Tier-2"]])
+    category_list_sort = ["Tier-1", "Tier-2"] + sorted([category for category in battles_by_category if category not in ["Tier-1", "Tier-2"]])
+    
+    battles_list = [["total", battles]] + [[category, battles_by_category[category]] for category in category_list_sort]
 
     for category, battles in battles_list:
         
