@@ -44,9 +44,9 @@ def compute_mle_elo(df, SCALE=400, BASE=10, INIT_RATING=1000):
 
     elo_scores = SCALE * lr.coef_[0] + INIT_RATING
 
-    # set anchor as gpt-4-turbo-1106 = 1000
-    if "gpt-4-turbo-1106" in models.index:
-        elo_scores += 1000 - elo_scores[models["gpt-4-turbo-1106"]]
+    # set anchor as gpt-3.5-turbo-1106 = 1000
+    if "gpt-3.5-turbo-1106" in models.index:
+        elo_scores += 1000 - elo_scores[models["gpt-3.5-turbo-1106"]]
     return pd.Series(elo_scores, index = models.index).sort_values(ascending=False)
 
 
@@ -105,7 +105,7 @@ def predict_win_rate(elo_ratings, SCALE=400, BASE=10, INIT_RATING=1000):
     return df.T
 
 
-def get_win_rate_column(df, column, baseline="gpt-4-turbo-1106"):
+def get_win_rate_column(df, column, baseline="gpt-3.5-turbo-1106"):
     to_dict = df[["model", column]].set_index("model").to_dict()[column]
     win_rate_table = predict_win_rate(to_dict)
     return win_rate_table[baseline].fillna(0.5).apply(lambda x: round(x * 100, 2))
@@ -124,7 +124,7 @@ def get_battles_from_judgment(judge_name, first_game_only=False, WEIGHT=3):
         for _, row in df.iterrows():
             # game 1
             output = {"question_id": row["question_id"],
-                    "model_a": "gpt-4-turbo-1106",
+                    "model_a": "gpt-3.5-turbo-1106",
                     "model_b": row["model"]}
             output["category"] = re.findall(r'category\[(.*?)\]', row["question_id"])[0]
 
@@ -152,7 +152,7 @@ def get_battles_from_judgment(judge_name, first_game_only=False, WEIGHT=3):
             if not first_game_only:
                 # game 2
                 output = {"question_id": row["question_id"],
-                        "model_a": "gpt-4-turbo-1106",
+                        "model_a": "gpt-3.5-turbo-1106",
                         "model_b": row["model"]}
                 output["category"] = re.findall(r'category\[(.*?)\]', row["question_id"])[0]
 
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bench-name", type=str, default="arena-hard-v0.1")
     parser.add_argument("--judge-name", type=str, default="gpt-4-1106-preview")
-    parser.add_argument("--baseline", type=str, default="gpt-4-turbo-1106")
+    parser.add_argument("--baseline", type=str, default="gpt-3.5-turbo-1106")
     parser.add_argument("--load-battles", action="store_true")
     parser.add_argument("--load-bootstrap", action="store_true")
     parser.add_argument("--show-elo", action="store_true")
