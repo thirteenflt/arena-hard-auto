@@ -91,9 +91,11 @@ def get_answer(
     # Dump answers
     ans = {
         "question_id": question["question_id"],
+        "category": question["category"],
         "answer_id": shortuuid.uuid(),
         "model_id": model,
         "choices": choices,
+        "question turns": question["turns"],
         "tstamp": time.time(),
     }
 
