@@ -27,6 +27,8 @@ if __name__ == "__main__":
     data_dir = os.path.join(f"data/{args.bench_name}/model_judgment", args.judge_name)
     data_files = glob(os.path.join(data_dir, "*.jsonl"))
 
+    language_tier = {"Tier-1": ["Chinese", "Japanese", "French", "Spanish", "German", "Italian", "Portuguese"], "Tier-2": ["Arabic", "Hindi", "Korean", "Czech", "Danish", "Finnish", "Hebrew", "Hungarian", "Dutch", "Norwegian", "Polish", "Russian", "Swedish", "Thai", "Turkish", "Ukrainian"]}
+
     for data_file in data_files:
         model_name = data_file.split('/')[-1].split('.')[0]
         print(f"================== {model_name} ====================")
@@ -66,6 +68,9 @@ if __name__ == "__main__":
 
         # Print the results beautifully
         table_data = []
+        tier_rate = {}
+        tier_rate["Tier-1"] = defaultdict(dict)
+        tier_rate["Tier-2"] = defaultdict(dict)
         for language, categories in results.items():
             for category, counts in categories.items():
                 total = counts['Pass'] + counts['Fail'] + counts['Missing']
@@ -73,4 +78,18 @@ if __name__ == "__main__":
                 fail_rate = counts['Fail'] / total * 100 if total > 0 else 0
                 missing_rate = counts['Missing'] / total * 100 if total > 0 else 0
                 table_data.append([language, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%"])
+
+                for tier, languages in language_tier.items():
+                    if language in languages:
+                        if category not in tier_rate[tier]:
+                            tier_rate[tier][category] = {'pass_rate': [], 'fail_rate': [], 'missing_rate': []}
+                        tier_rate[tier][category]["pass_rate"].append(pass_rate)
+                        tier_rate[tier][category]["fail_rate"].append(fail_rate)
+                        tier_rate[tier][category]["missing_rate"].append(missing_rate)
+        for tier, categories in tier_rate.items():
+            for category, rates in categories.items():
+                pass_rate = np.mean(rates["pass_rate"])
+                fail_rate = np.mean(rates["fail_rate"])
+                missing_rate = np.mean(rates["missing_rate"])
+                table_data.append([tier, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%"])
         print(tabulate(table_data, headers=["Language", "Category", "Pass Rate", "Fail Rate", "Missing Rate"]))
