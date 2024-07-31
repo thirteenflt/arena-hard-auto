@@ -58,6 +58,7 @@ def judgment(**args):
 
     output = {
         "question_id":question["question_id"],
+        "category": "None" if "category" not in question else question["category"],
         "model":answer["model_id"],
         "judge": model,
         "games":[]
