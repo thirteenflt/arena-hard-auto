@@ -39,6 +39,11 @@ if __name__ == "__main__":
         with jsonlines.open(data_file) as reader:
             for obj in reader:
                 json_data.append(obj)
+        
+        # load model answer
+        answer_dir = f"data/{args.bench_name}/model_answer"
+        with jsonlines.open(os.path.join(answer_dir, f"{model_name}.jsonl")) as reader:
+            model_answers = {entry['question_id']: entry['choices'] for entry in reader}
 
         # Initialize a dictionary to store pass and fail rates
         results = {}
@@ -57,7 +62,7 @@ if __name__ == "__main__":
             if language not in results:
                 results[language] = {}
             if category not in results[language]:
-                results[language][category] = {'Pass': 0, 'Fail': 0, 'Missing': 0}
+                results[language][category] = {'Pass': 0, 'Fail': 0, 'Missing': 0, "AVG len": []}
             
             # Update the pass or fail count
             if score == 'Pass':
@@ -66,6 +71,7 @@ if __name__ == "__main__":
                 results[language][category]['Fail'] += 1
             else:
                 results[language][category]['Missing'] += 1
+            results[language][category]["AVG len"].append(model_answers[question_id][0]["turns"][0]["token_len"])
 
         # Print the results beautifully
         table_data = []
@@ -78,22 +84,25 @@ if __name__ == "__main__":
                 pass_rate = counts['Pass'] / total * 100 if total > 0 else 0
                 fail_rate = counts['Fail'] / total * 100 if total > 0 else 0
                 missing_rate = counts['Missing'] / total * 100 if total > 0 else 0
-                table_data.append([language, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%"])
+                avg_len = np.mean(counts["AVG len"])
+                table_data.append([language, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%", f"{avg_len:.0f}"])
 
                 for tier, languages in language_tier.items():
                     if language in languages:
                         if category not in tier_rate[tier]:
-                            tier_rate[tier][category] = {'pass_rate': [], 'fail_rate': [], 'missing_rate': []}
+                            tier_rate[tier][category] = {'pass_rate': [], 'fail_rate': [], 'missing_rate': [], 'avg_len': []}
                         tier_rate[tier][category]["pass_rate"].append(pass_rate)
                         tier_rate[tier][category]["fail_rate"].append(fail_rate)
                         tier_rate[tier][category]["missing_rate"].append(missing_rate)
+                        tier_rate[tier][category]["avg_len"].append(avg_len)
         for tier, categories in tier_rate.items():
             for category, rates in categories.items():
                 pass_rate = np.mean(rates["pass_rate"])
                 fail_rate = np.mean(rates["fail_rate"])
                 missing_rate = np.mean(rates["missing_rate"])
-                table_data.append([tier, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%"])
-        print(tabulate(table_data, headers=["Language", "Category", "Pass Rate", "Fail Rate", "Missing Rate"]))
+                avg_len = np.mean(rates["avg_len"])
+                table_data.append([tier, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%", f"{avg_len:.0f}"])
+        print(tabulate(table_data, headers=["Language", "Category", "Pass Rate", "Fail Rate", "Missing Rate", "AVG len"]))
 
         # save examples
         sorted_examples = defaultdict(lambda: defaultdict(list))
