@@ -17,6 +17,7 @@ from collections import defaultdict
 from utils import load_model_answers
 import jsonlines
 from tabulate import tabulate
+import json
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -93,3 +94,24 @@ if __name__ == "__main__":
                 missing_rate = np.mean(rates["missing_rate"])
                 table_data.append([tier, category, f"{pass_rate:.2f}%", f"{fail_rate:.2f}%", f"{missing_rate:.2f}%"])
         print(tabulate(table_data, headers=["Language", "Category", "Pass Rate", "Fail Rate", "Missing Rate"]))
+
+        # save examples
+        sorted_examples = defaultdict(lambda: defaultdict(list))
+
+        # Process each entry in the JSONL data
+        for entry in json_data:
+            # Extract language and category
+            question_id = entry['question_id']
+            language = question_id.split('[')[1].split(']')[0]
+            category = entry['category']    
+            sorted_examples[language][category].append(entry)
+
+        # Save the failed examples to separate files for each language with pretty-printing
+        for language, categories in sorted_examples.items():
+            output_file = os.path.join(data_dir, model_name, f"examples_{language}.jsonl")
+            if not os.path.exists(os.path.dirname(output_file)):
+                os.makedirs(os.path.dirname(output_file))
+            with open(output_file, mode='w') as writer:
+                for category, examples in sorted(categories.items()):
+                    for example in examples:
+                        writer.write(json.dumps(example, indent=2, ensure_ascii=False) + '\n') 
