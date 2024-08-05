@@ -57,6 +57,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=str, default="8008", help="port for hosting vllm"
     )
+    parser.add_argument(
+        "--max_answer_tokens", type=int, default=2048, help="max tokens for generating answer"
+    )
     args = parser.parse_args()
 
     # read the api_config file
@@ -107,7 +110,7 @@ if __name__ == "__main__":
         gen_answer_config = yaml.safe_load(file)
 
     gen_answer_config['model_list'] = [model_id]
-    gen_answer_config['max_tokens'] = 2048 # reduce this from 4096 to 2048 since phi model has a limit of 4k tokens
+    gen_answer_config['max_tokens'] = args.max_answer_tokens
 
     print(gen_answer_config)
     file_path = os.path.join(os.path.dirname(__file__), 'config/gen_answer_config_test.yaml')
