@@ -69,6 +69,8 @@ if __name__ == "__main__":
                 results[language][category]['Pass'] += 1
             elif score == 'Fail':
                 results[language][category]['Fail'] += 1
+            elif isinstance(score, float):
+                results[language][category]['Pass'] += score
             else:
                 results[language][category]['Missing'] += 1
             results[language][category]["AVG len"].append(model_answers[question_id][0]["turns"][0]["token_len"])
@@ -80,7 +82,7 @@ if __name__ == "__main__":
         tier_rate["Tier-2"] = defaultdict(dict)
         for language, categories in results.items():
             for category, counts in categories.items():
-                total = counts['Pass'] + counts['Fail'] + counts['Missing']
+                total = len(counts["AVG len"])
                 pass_rate = counts['Pass'] / total * 100 if total > 0 else 0
                 fail_rate = counts['Fail'] / total * 100 if total > 0 else 0
                 missing_rate = counts['Missing'] / total * 100 if total > 0 else 0

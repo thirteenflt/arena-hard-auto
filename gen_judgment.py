@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 import concurrent.futures
+from collections import defaultdict
 
 from tqdm import tqdm
 
@@ -17,6 +18,11 @@ from utils import (
     get_endpoint,
     make_config,
 )
+
+from ftlangdetect import detect
+
+def language_identifier(txt):
+    return detect(text=txt.replace("\n", " "), low_memory=False)['lang']
 
 
 def get_score(judgment, pattern, pairwise=True):
@@ -63,65 +69,82 @@ def judgment(**args):
         "judge": model,
         "games":[]
         }
+    
+    if output["category"] == "language":
 
-    for game in range(num_games):
-        conv = [{"role": "system", "content": configs["system_prompt"]}]
-
-        for template in configs["prompt_template"]:
-            prompt_args = {}
-
-            for i, turn in enumerate(question["turns"]):
-                prompt_args[f"question_{i+1}"] = turn["content"]
-            base = 1
-
-            if baseline:
-                if game % 2 == 1: # swap position
-                    temp = baseline
-                    baseline = answer
-                    answer = temp
-
-                for i, turn in enumerate(baseline["choices"][0]["turns"]):
-                    prompt_args[f"answer_{i+1}"] = turn["content"]
-                    base += 1
-            if answer:
-                for i, turn in enumerate(answer["choices"][0]["turns"]):
-                    prompt_args[f"answer_{i+base}"] = turn["content"]
-
-            if reference:
-                for j, ref_answer in enumerate(reference):
-                    for i, turn in enumerate(ref_answer["choices"][0]["turns"]):
-                        prompt_args[f"ref_answer_{i+j+1}"] = turn["content"]
-            
-            user_prompt = template.format(**prompt_args)
-            conv.append({"role": "user", "content": user_prompt})
-
-        judgment = ""
-        for _ in range(2):
-            new_judgment = get_answer(
-                endpoint_info["model_name"],
-                conv,
-                configs["temperature"],
-                configs["max_tokens"],
-                args["endpoint_dict"],
-            )
-
-            judgment += ("\n" + new_judgment)
-
-            score, try_again = get_score(judgment, args["regex_pattern"])
-
-            conv.append({"role": "assistant", "content": new_judgment})
-
-            if not try_again:
-                break
-
-            conv.append({"role": "user", "content": "continue your judgment and finish by outputting a final verdict label"})
-
+        language_dict = defaultdict(list)
+        for i, turn in enumerate(question["turns"]):
+            language_dict["question"].append(language_identifier(turn["content"]))
+        for i, turn in enumerate(answer["choices"][0]["turns"]):
+            language_dict["answer"].append(language_identifier(turn["content"]))
+        score = sum([1 for i in range(len(language_dict["question"])) if language_dict["question"][i] == language_dict["answer"][i]]) / len(language_dict["question"])
         result = {
-            "user_prompt": conv[1]["content"],
-            "judgment": judgment,
+            "question": question["turns"],
+            "answer": answer["choices"][0]["turns"],
+            "judgment": language_dict,
             "score":score
         }
         output["games"].append(result)
+
+    else:    
+        for game in range(num_games):
+            conv = [{"role": "system", "content": configs["system_prompt"]}]
+
+            for template in configs["prompt_template"]:
+                prompt_args = {}
+
+                for i, turn in enumerate(question["turns"]):
+                    prompt_args[f"question_{i+1}"] = turn["content"]
+                base = 1
+
+                if baseline:
+                    if game % 2 == 1: # swap position
+                        temp = baseline
+                        baseline = answer
+                        answer = temp
+
+                    for i, turn in enumerate(baseline["choices"][0]["turns"]):
+                        prompt_args[f"answer_{i+1}"] = turn["content"]
+                        base += 1
+                if answer:
+                    for i, turn in enumerate(answer["choices"][0]["turns"]):
+                        prompt_args[f"answer_{i+base}"] = turn["content"]
+
+                if reference:
+                    for j, ref_answer in enumerate(reference):
+                        for i, turn in enumerate(ref_answer["choices"][0]["turns"]):
+                            prompt_args[f"ref_answer_{i+j+1}"] = turn["content"]
+                
+                user_prompt = template.format(**prompt_args)
+                conv.append({"role": "user", "content": user_prompt})
+
+            judgment = ""
+            for _ in range(2):
+                new_judgment = get_answer(
+                    endpoint_info["model_name"],
+                    conv,
+                    configs["temperature"],
+                    configs["max_tokens"],
+                    args["endpoint_dict"],
+                )
+
+                judgment += ("\n" + new_judgment)
+
+                score, try_again = get_score(judgment, args["regex_pattern"])
+
+                conv.append({"role": "assistant", "content": new_judgment})
+
+                if not try_again:
+                    break
+
+                conv.append({"role": "user", "content": "continue your judgment and finish by outputting a final verdict label"})
+
+            result = {
+                "user_prompt": conv[1]["content"],
+                "judgment": judgment,
+                "score":score
+            }
+            output["games"].append(result)
 
     with open(output_file, "a") as f:
         f.write(json.dumps(output, ensure_ascii=False) + "\n")

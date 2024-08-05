@@ -12,3 +12,4 @@ azureml.core
 azure.identity
 jsonlines
 tabulate
+fasttext-langdetect
