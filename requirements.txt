@@ -12,4 +12,4 @@ azureml.core
 azure.identity
 jsonlines
 tabulate
-fasttext-langdetect
+fasttext-langdetect==1.0.5
