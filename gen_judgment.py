@@ -197,6 +197,17 @@ if __name__ == "__main__":
 
     endpoint_info = endpoint_list[configs["judge_model"]]
 
+    # try language identification 10 times
+    for _ in range(10):
+        try:
+            sentence = "hello! this is a test"
+            label = language_identifier(sentence)
+            print(f"Language detection test for '{sentence}' is {label}")
+            break
+        except:
+            # wait for the model to be ready
+            time.sleep(5)
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=endpoint_info["parallel"]) as executor:
         futures = []
         for model in models:
