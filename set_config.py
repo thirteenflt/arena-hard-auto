@@ -60,6 +60,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_answer_tokens", type=int, default=2048, help="max tokens for generating answer"
     )
+    parser.add_argument(
+        "--categories", type=str, default="all", help="categories for generating answer, split by comma"
+    )
     args = parser.parse_args()
 
     # read the api_config file
@@ -111,6 +114,7 @@ if __name__ == "__main__":
 
     gen_answer_config['model_list'] = [model_id]
     gen_answer_config['max_tokens'] = args.max_answer_tokens
+    gen_answer_config['categories'] = args.categories.split(',')
 
     print(gen_answer_config)
     file_path = os.path.join(os.path.dirname(__file__), 'config/gen_answer_config_test.yaml')

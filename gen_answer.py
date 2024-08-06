@@ -130,6 +130,10 @@ if __name__ == "__main__":
 
         question_file = os.path.join("data", settings["bench_name"], args.question_file)
         questions = load_questions(question_file)
+        
+        # filter questions not in settings["categories"]
+        if "categories" in settings and "all" not in settings["categories"]:
+            questions = [question for question in questions if question["category"] in settings["categories"]]
 
         answer_file = os.path.join("data", settings["bench_name"], "model_answer", f"{model}.jsonl")
         print(f"Output to {answer_file}")
